@@ -190,6 +190,7 @@ def process_web_request(cs, webroot):
                     while (msg):
                         if msg != '':
                             enviar_mensaje(cs, msg)
+                        msg = f.read(BUFSIZE)
 
             else:
                 running = False
