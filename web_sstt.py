@@ -186,7 +186,8 @@ def process_web_request(cs, webroot):
 
                 # Se lee y se envía el fichero
                 with open(absolute_path, 'rb') as f:
-                    while (msg := f.read(BUFSIZE)):
+                    msg = f.read(BUFSIZE)
+                    while (msg):
                         if msg != '':
                             enviar_mensaje(cs, msg)
 
