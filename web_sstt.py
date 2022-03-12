@@ -92,6 +92,8 @@ def process_web_request(cs, webroot):
             request_i = recibir_mensaje(cs)
 
             http_lines = request_i.split('\r\n')
+
+            print(http_lines)
             
             if ' ' in http_lines[0]:
                 print('ENTRA')
