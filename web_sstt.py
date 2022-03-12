@@ -61,13 +61,16 @@ def process_cookies(headers):
         4. Si se encuentra y tiene el valor MAX_ACCESSOS se devuelve MAX_ACCESOS
         5. Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
     """
+    print(headers)
     if 'Cookie' in headers:
+        
         patron_cookie = r'cookie_counter=(\d{1})'
         er_cookie = re.compile(patron_cookie)
         result = er_cookie.fullmatch(headers['Cookie'])
         if result:
             a = result.group(1)
             n = int(a)
+            print('COOKIE ENCONTRADA', n)
             if n == MAX_ACCESOS:
                 return MAX_ACCESOS
             elif n <= MAX_ACCESOS and n >=1:
@@ -92,11 +95,9 @@ def process_web_request(cs, webroot):
             request_i = recibir_mensaje(cs)
 
             http_lines = request_i.split('\r\n')
-
-            print(http_lines)
             
             if ' ' in http_lines[0]:
-                print('ENTRA')
+
                 try:
                     method, resource, version = http_lines[0].split(' ', 2)
 
@@ -140,7 +141,7 @@ def process_web_request(cs, webroot):
                             #   el valor de cookie_counter para ver si ha llegado a MAX_ACCESOS.
                             #   Si se ha llegado a MAX_ACCESOS devolver un Error "403 Forbidden"
                                     
-                            else:
+                            elif resource == '/index.html':
                                 cookie_value = process_cookies(headers)
 
                                 if cookie_value < MAX_ACCESOS:
@@ -152,7 +153,6 @@ def process_web_request(cs, webroot):
                 except:
                     state_line = "HTTP/1.1 400 Bad Request"
                     resource = '/400.html'
-                    
                     
                 # Construir la ruta absoluta del recurso (webroot + recurso solicitado)
                 absolute_path = webroot + resource
@@ -209,7 +209,6 @@ def main():
     """
 
     try:
-
         # Argument parser para obtener la ip y puerto de los parámetros de ejecución del programa. IP por defecto 0.0.0.0
         parser = argparse.ArgumentParser()
         parser.add_argument("-p", "--port", help="Puerto del servidor", type=int, required=True)
