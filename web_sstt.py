@@ -177,7 +177,7 @@ def process_web_request(cs, webroot):
                     "Keep-Alive: timeout=10\r\n"\
                     "{4}"\
                     "\r\n"\
-                    .format(state_line, extension, size, datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'), cookie)
+                    .format(state_line, extension, size, datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'), cookie)
 
                 print(response_msg)
 
