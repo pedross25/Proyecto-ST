@@ -160,7 +160,7 @@ def process_web_request(cs, webroot):
                 # Respuesta
                 response_msg = \
                     "{0}" \
-                    "Server: Mi Servidor\r\n"\
+                    "Server: telematica37\r\n"\
                     "Content-Type: {1}\r\n"\
                     "Content-Length: {2}\r\n"\
                     "Date: {3}\r\n"\
