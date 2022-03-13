@@ -108,12 +108,12 @@ def process_web_request(cs, webroot):
                                 
                     # Comprueba versión de HTTP    
                     if (request['version'] != 'HTTP/1.1'):
-                        state_line = 'HTTP/1.1 505 HTTP Version Not Supported'
+                        state_line = 'HTTP/1.1 505 HTTP Version Not Supported\r\n'
                         resource = '/505.html'
                         # Comprobar si es un método GET. Si no devolver un error  # ? Error 405 "Method Not Allowed".
                     else:
                         if (request['method'] != 'GET'):
-                            state_line = "HTTP/1.1 405 METHOD NOT ALLOWED \r\n"
+                            state_line = "HTTP/1.1 405 METHOD NOT ALLOWED\r\n"
                             resource = '/405.html'
                             print('Metodo desconocido')
                         else:
@@ -141,7 +141,7 @@ def process_web_request(cs, webroot):
                                     
                                 
                 except:
-                    state_line = "HTTP/1.1 400 Bad Request"
+                    state_line = "HTTP/1.1 400 Bad Request\r\n"
                     resource = '/400.html'
                     
                 # Construir la ruta absoluta del recurso (webroot + recurso solicitado)
