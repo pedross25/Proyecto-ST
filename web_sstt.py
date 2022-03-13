@@ -1,6 +1,5 @@
 # coding=utf-8
 #!/usr/bin/env python3
-
 import socket
 import selectors    #https://docs.python.org/3/library/selectors.html
 import select
@@ -61,16 +60,13 @@ def process_cookies(headers):
         4. Si se encuentra y tiene el valor MAX_ACCESSOS se devuelve MAX_ACCESOS
         5. Si se encuentra y tiene un valor 1 <= x < MAX_ACCESOS se incrementa en 1 y se devuelve el valor
     """
-    print(headers)
     if 'Cookie' in headers:
-        
         patron_cookie = r'cookie_counter=(\d{1})'
         er_cookie = re.compile(patron_cookie)
         result = er_cookie.fullmatch(headers['Cookie'])
         if result:
             a = result.group(1)
             n = int(a)
-            print('COOKIE ENCONTRADA', n)
             if n == MAX_ACCESOS:
                 return MAX_ACCESOS
             elif n <= MAX_ACCESOS and n >=1:
@@ -85,7 +81,7 @@ def process_web_request(cs, webroot):
 
     while running:
 
-        print('waiting for the next event')
+        print('\nwaiting for the next event')
         rsublist, wsublist, xsublist = select.select(inputs, [], [], TIMEOUT_CONNECTION)
 
         # Se comprueba si hay que cerrar la conexión por exceder TIMEOUT_CONNECTION segundos
@@ -93,11 +89,10 @@ def process_web_request(cs, webroot):
             
             # Leer los datos con recv
             request_i = recibir_mensaje(cs)
-
             http_lines = request_i.split('\r\n')
             
             if ' ' in http_lines[0]:
-
+                # Lee y comprueba formato de la petición
                 try:
                     method, resource, version = http_lines[0].split(' ', 2)
 
@@ -107,12 +102,11 @@ def process_web_request(cs, webroot):
 
                     # Devuelve el resto de parámetros de las cabeceras
                     headers = {}
-                    for line in http_lines[1:-4]:
+                    for line in http_lines[1:-2]:
                         key, value = line.split(': ', 2)
                         headers[key] = value
                                 
-                    # Comprueba versión de HTTP
-                        
+                    # Comprueba versión de HTTP    
                     if (request['version'] != 'HTTP/1.1'):
                         state_line = 'HTTP/1.1 505 HTTP Version Not Supported'
                         resource = '/505.html'
@@ -123,40 +117,35 @@ def process_web_request(cs, webroot):
                             resource = '/405.html'
                             print('Metodo desconocido')
                         else:
-                            # Comprobar si el recurso solicitado es /, En ese caso el recurso es index.html
-                            if (request['resource'] == '/'):
+                            # Comprobar si el recurso solicitado es /, En ese caso el recurso es index.html y se procesa la cookie
+                            if (request['resource'] == '/' or request['resource'] == '/index.html'):
                                 resource = '/index.html'
+                                cookie_value = process_cookies(headers)
+
+                                if cookie_value < MAX_ACCESOS:
+                                    cookie = "Set-Cookie: cookie_counter={0}; Max-Age=120\r\n".format(cookie_value)
+                                    state_line = "HTTP/1.1 200 OK\r\n"
+                                else:
+                                    state_line = "HTTP/1.1 403 FORBIDDEN\r\n"
+                                    resource = '/403.html'
                             else:
                                 resource = request['resource']
 
                             # Leer URL y eliminar parámetros si los hubiera
-                            print(resource)
+                            print('Recurso solicitado:', resource)
 
-                            # Comprobar que el recurso (fichero) existe, si no devolver # ? Error 404 "Not found"
+                            # Comprobar que el recurso (fichero) existe, si no devolver Error 404 "Not found"
                             if not (os.path.isfile(webroot+resource)):
                                 state_line = "HTTP/1.1 404 NOT FOUND \r\n"
                                 resource = '/404.html'
-                                        
-                            # Analizar las cabeceras. Imprimir cada cabecera y su valor. Si la cabecera es Cookie comprobar
-                            #   el valor de cookie_counter para ver si ha llegado a MAX_ACCESOS.
-                            #   Si se ha llegado a MAX_ACCESOS devolver un Error "403 Forbidden"
                                     
-                            elif resource == '/index.html':
-                                cookie_value = process_cookies(headers)
-
-                                if cookie_value < MAX_ACCESOS:
-                                    state_line = "HTTP/1.1 200 OK\r\n"
-                                    cookie = "Set-Cookie: cookie_counter={0}; Max-Age=120\r\n".format(cookie_value)
-                                else:
-                                    state_line = "HTTP/1.1 403 FORBIDDEN\r\n"
-                                    resource = '/403.html'
+                                
                 except:
                     state_line = "HTTP/1.1 400 Bad Request"
                     resource = '/400.html'
                     
                 # Construir la ruta absoluta del recurso (webroot + recurso solicitado)
                 absolute_path = webroot + resource
-                print('Ruta absoluta: ' + absolute_path)
 
                 # Obtener el tamaño del recurso en bytes.
                 size = os.stat(absolute_path).st_size
@@ -176,18 +165,22 @@ def process_web_request(cs, webroot):
                     "Content-Length: {2}\r\n"\
                     "Date: {3}\r\n"\
                     "Connection: Keep-Alive\r\n"\
-                    "Keep-Alive: timeout=10\r\n"\
+                    "Keep-Alive: timeout=20\r\n"\
                     "{4}"\
                     "\r\n"\
-                    .format(state_line, extension, size, datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'), cookie)
+                    .format(state_line, extension, size, datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'), cookie)
 
+                # Imprimimos las cabeceras de la respuesta
+                print('\nMensaje de respuesta:')
                 print(response_msg)
 
                 a = response_msg.encode()
-                enviar_mensaje(cs, a)
+                r = BUFSIZE - len(a)
 
                 # Se lee y se envía el fichero
                 with open(absolute_path, 'rb') as f:
+                    b = f.read(r)
+                    enviar_mensaje(cs, b"".join([a,b]))
                     msg = f.read(BUFSIZE)
                     while (msg):
                         if msg != '':
@@ -196,7 +189,7 @@ def process_web_request(cs, webroot):
 
             else:
                 running = False
-            
+        # Se cierra la conexión por timeout
         else:
             print('Time Out')
             running = False
@@ -249,10 +242,8 @@ def main():
             pid = os.fork()
 
             if pid == 0:
-                print('Proceso hijo')
                 server.close()
                 process_web_request(cs, args.webroot)
-                print('Proceso hijo termina')
                 sys.exit()
 
             else:
